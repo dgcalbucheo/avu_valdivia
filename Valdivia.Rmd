@@ -1,0 +1,108 @@
+---
+title: "Estudio AVU-indicadores Socioeconómicos (SEC) manzanas censales Valdivia"
+output: 
+  html_notebook:
+    df_print: paged
+---
+
+## Objetivo: 
+Evaluar la correlación entre índices SEC y el porcentaje de AVU de las manzanas censales de Valdivia
+
+## Pasos:
+1) Obtener datos de manzanas censales (Censo 2017) de Valdivia (.shp)
+2) Revisar indicadores SEC de manzanas censales
+3) Definir BUFFER a las manzanas censales
+4) Calcular el NDVI promedio y el % de AVU con "rgee" (Landsat8)
+
+
+Cargamos los paquetes. "censo2017" se descarga de github/ropensci
+```{r}
+pkgs = c("ggplot2","sf","dplyr","cartography","leaflet","rgdal","raster","tmap", "tibble", "terra")
+lapply(pkgs, require, character.only = TRUE)
+```
+
+## 1. Obtener datos de manzanas censales (Censo 2017) de Valdivia
+```{r}
+setwd("C:\\Users\\dgcal\\Documents\\AAAACTUAL\\Msc\\Tesis\\Datos\\Valdivia")
+mapvald = st_read("mapvald.shp")
+mapvald100 = st_read("mapvald100.shp")
+```
+
+
+## 2. Revisar indicadores SEC de manzanas censales
+
+## 2.1. Población migrante
+```{r}
+mapvald<-mapvald%>%
+  mutate(PERSONAS_E = na_if(PERSONAS_E, "Indeterminado"))
+
+mapvald$porcentaje_migr <-
+  (as.numeric(mapvald$PERSONAS_E)/mapvald$TOTAL_P) * 100
+```
+
+## 2.2. Pueblos originarios
+```{r}
+mapvald<-mapvald%>%
+  mutate(PUEBLOS = na_if(PUEBLOS, "Indeterminado"))
+
+mapvald$porcentaje_ind <-
+  (as.numeric(mapvald$PUEBLOS)/mapvald$TOTAL_P) * 100
+```
+
+## 2.3. Materialidad viviendas
+```{r}
+#Pendiente
+```
+
+Plot
+```{r}
+leafsync::latticeview(mapview::mapview(mapvald),
+                      mapview::mapview(mapvald100))
+
+#Se ve bien el buffer
+#Seguimos
+```
+
+## 4. Calcular el NDVI
+Cargamos el raster descargado desde GEE
+```{r}
+imagen<-list.files(pattern='*.tif', full.names=TRUE)
+bandassep<-brick(stack(imagen)) #esto es por si quiero que el raster tenga hartas capas, por ejemplo, por fecha
+
+plot(bandassep)
+```
+
+Calculamos el NDVI
+```{r}
+ndvi<-(bandassep$B5-bandassep$B4)/(bandassep$B5+bandassep$B4)
+plot(ndvi,
+     main="NDVI Valdivia y Niebla - Septiembre 2020")
+```
+
+
+Veamos el histograma del NDVI/pixel
+```{r}
+hist(ndvi,
+     main = "NDVI: Distribución de los pixeles VALDIVIA/NIEBLA Sept 2020",
+     col = "springgreen",
+     xlab = "valores del NDVI")
+```
+
+
+Intentaremos clippear el raster con el ndvi en el mapa de valdivia
+```{r}
+r = crop(ndvi, mapvald)
+#they do not overlap, so...
+crs(ndvi)
+
+```
+
+```{r}
+crs(mapvald)
+```
+
+reproject to utm
+```{r}
+test<- sp::spTransform(mapvald, crs(ndvi)) #32718
+```
+
