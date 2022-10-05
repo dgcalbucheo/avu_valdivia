@@ -23,9 +23,8 @@ lapply(pkgs, require, character.only = TRUE)
 
 ## 1. Obtener datos de manzanas censales (Censo 2017) de Valdivia
 ```{r}
-setwd("C:\\Users\\dgcal\\Documents\\AAAACTUAL\\Msc\\Tesis\\Datos\\Valdivia")
+setwd("C:\\Users\\dgcal\\Documents\\Github\\avu_valdivia")
 mapvald = st_read("mapvald.shp")
-mapvald100 = st_read("mapvald100.shp")
 ```
 
 
@@ -53,6 +52,15 @@ mapvald$porcentaje_ind <-
 ```{r}
 #Pendiente
 ```
+
+
+Definir Buffer (100m) para cada manzana censal
+```{r}
+mapvald100<-mapvald%>%
+  sf::st_buffer(100)
+#st_write(mapvald100, "mapvald100.shp", driver = "ESRI Shapefile")
+```
+
 
 Plot
 ```{r}
@@ -93,16 +101,21 @@ Intentaremos clippear el raster con el ndvi en el mapa de valdivia
 ```{r}
 r = crop(ndvi, mapvald)
 #they do not overlap, so...
-crs(ndvi)
+crs(mapvald100)
 
 ```
 
 ```{r}
-crs(mapvald)
+crs(ndvi)
 ```
 
 reproject to utm
 ```{r}
-test<- sp::spTransform(mapvald, crs(ndvi)) #32718
-```
+#sr<-"proj=utm + zone = 15 + ellps=GRS80 + datum=WGS84 + units=m"
+test<- st_transform(mapvald, crs=32718) #32718
+test2<- projectRaster(ndvi, crs=32718)
 
+r = crop(test2,extent(test))
+r2 = mask(r, test)
+plot(r2)
+```
