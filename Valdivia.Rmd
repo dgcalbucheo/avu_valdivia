@@ -118,4 +118,18 @@ test2<- projectRaster(ndvi, crs=32718)
 r = crop(test2,extent(test))
 r2 = mask(r, test)
 plot(r2)
+
+#funcionó!!!
 ```
+
+Ahora si, clipeamos el mapa que tiene el buffer (100m)
+```{r}
+mapvald100<- st_transform(mapvald100, crs=32718) #32718
+ndvi<- projectRaster(ndvi, crs=32718)
+
+r = crop(ndvi,extent(mapvald100))
+r2 = mask(r, mapvald100)
+plot(r2)
+```
+
+
