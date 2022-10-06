@@ -109,9 +109,8 @@ crs(mapvald100)
 crs(ndvi)
 ```
 
-reproject to utm
+reproject to utm, veamos con este método
 ```{r}
-#sr<-"proj=utm + zone = 15 + ellps=GRS80 + datum=WGS84 + units=m"
 test<- st_transform(mapvald, crs=32718) #32718
 test2<- projectRaster(ndvi, crs=32718)
 
@@ -122,14 +121,24 @@ plot(r2)
 #funcionó!!!
 ```
 
-Ahora si, clipeamos el mapa que tiene el buffer (100m)
+Ahora si, corregimos el mapa que tiene el buffer (100m) y el raster (ndvi)
 ```{r}
 mapvald100<- st_transform(mapvald100, crs=32718) #32718
 ndvi<- projectRaster(ndvi, crs=32718)
 
-r = crop(ndvi,extent(mapvald100))
-r2 = mask(r, mapvald100)
-plot(r2)
 ```
 
+Método anterior*, no sirve mucho porque corta la imagen al polígono, pero lo dejo igual por si acaso
+```{r}
+#r = crop(ndvi,extent(mapvald100))
+#r2 = mask(r, mapvald100)
+#plot(r2)
+```
+
+extract mean del ndvi para clipearlo al mapvald (dsp al mapvald100)
+```{r}
+mapvald<-
+  mapvald%>%mutate(
+    ndvimean = extract(ndvi, mapvald, fun = mean, na.rm = TRUE))
+```
 
