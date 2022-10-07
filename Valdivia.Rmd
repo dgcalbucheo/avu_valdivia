@@ -13,6 +13,7 @@ Evaluar la correlación entre índices SEC y el porcentaje de AVU de las manzana
 2) Revisar indicadores SEC de manzanas censales
 3) Definir BUFFER a las manzanas censales
 4) Calcular el NDVI promedio y el % de AVU con "rgee" (Landsat8)
+5) Evaluar correlaciones
 
 
 Cargamos los paquetes. "censo2017" se descarga de github/ropensci
@@ -109,7 +110,7 @@ crs(mapvald100)
 crs(ndvi)
 ```
 
-reproject to utm, veamos con este método
+## 4.1 Reproyectamos a UTM (18S), veamos con este método
 ```{r}
 test<- st_transform(mapvald, crs=32718) #32718
 test2<- projectRaster(ndvi, crs=32718)
@@ -121,12 +122,15 @@ plot(r2)
 #funcionó!!!
 ```
 
+
 Ahora si, corregimos el mapa que tiene el buffer (100m) y el raster (ndvi)
 ```{r}
 mapvald100<- st_transform(mapvald100, crs=32718) #32718
 ndvi<- projectRaster(ndvi, crs=32718)
 
 ```
+
+
 
 Método anterior*, no sirve mucho porque corta la imagen al polígono, pero lo dejo igual por si acaso
 ```{r}
@@ -135,10 +139,21 @@ Método anterior*, no sirve mucho porque corta la imagen al polígono, pero lo d
 #plot(r2)
 ```
 
-extract mean del ndvi para clipearlo al mapvald (dsp al mapvald100)
+
+## 4.2 Extraemos zonal stats del ndvi para clipearlo a mapvald (después hay que revisar cómo clipearlo con un buffer)
 ```{r}
 mapvald<-
   mapvald%>%mutate(
     ndvimean = extract(ndvi, mapvald, fun = mean, na.rm = TRUE))
 ```
 
+## 4.3 Figura exploratoria
+```{r}
+ggplot(mapvald, aes(x = porcentaje_ind, y = ndvimean))+
+         geom_point()+
+  geom_smooth(method="lm")+
+         theme_classic()
+```
+
+
+## 4.4 Ahora se revisa con un buffer de 100 metros.
