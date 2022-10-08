@@ -55,7 +55,7 @@ mapvald$porcentaje_ind <-
 ```
 
 
-Definir Buffer (100m) para cada manzana censal
+## 3. Definir Buffer (100m) para cada manzana censal
 ```{r}
 mapvald100<-mapvald%>%
   sf::st_buffer(100)
@@ -156,4 +156,14 @@ ggplot(mapvald, aes(x = porcentaje_ind, y = ndvimean))+
 ```
 
 
-## 4.4 Ahora se revisa con un buffer de 100 metros.
+## 4.4 Ahora calculamos qué superficie es Área Verde Urbana con distintos valores de NDVI
+
+Primero con NDVI >= 0.3
+```{r}
+fun03 <- (function(x){x[x<0.3]<- 0; return(x)}+function(x){x[x>=0.3]<- 1; return(x)})
+avu03 <- calc(ndvi, fun03)
+plot(avu03,
+     main="AVU Valdivia y Niebla - Septiembre 2020")
+#hay que revisar esto
+```
+
