@@ -160,10 +160,39 @@ ggplot(mapvald, aes(x = porcentaje_ind, y = ndvimean))+
 
 Primero con NDVI >= 0.3
 ```{r}
-fun03 <- (function(x){x[x<0.3]<- 0; return(x)}+function(x){x[x>=0.3]<- 1; return(x)})
+fun03 <- (function(x){x[x<0.3]<- 0; x[x>=0.3]<- 1 ; return(x)})
 avu03 <- calc(ndvi, fun03)
 plot(avu03,
      main="AVU Valdivia y Niebla - Septiembre 2020")
-#hay que revisar esto
+```
+
+Ahora con NDVI >=0.35
+```{r}
+fun035 <- (function(x){x[x<0.35]<- 0; x[x>=0.35]<- 1 ; return(x)})
+avu035 <- calc(ndvi, fun035)
+plot(avu035,
+     main="AVU Valdivia y Niebla - Septiembre 2020 (NDVI >= 0.35)")
+```
+
+Ahora extraemos los mismos zonal stats que sacamos del NDVI, pero de las AVU (0.3 y 0.35). Aún está pendiente hacerlo al BUFFER
+```{r}
+mapvald<-
+  mapvald%>%mutate(
+    avu03 = extract(avu03, mapvald, fun = mean, na.rm = TRUE))
+
+mapvald<-
+  mapvald%>%mutate(
+    avu035 = extract(avu035, mapvald, fun = mean, na.rm = TRUE))
+
+#PENDIENTE, NECESITO EXTRAER EL VALOR SUM/TOTAL DE CADA POLÍGONO
+```
+
+Veámos qué tal
+Figura exploratoria
+```{r}
+ggplot(mapvald, aes(x = porcentaje_ind, y = avu03))+
+         geom_point()+
+  geom_smooth(method="lm")+
+         theme_classic()
 ```
 
