@@ -190,7 +190,7 @@ mapvald<-
 Veámos qué tal
 Figura exploratoria
 ```{r}
-ggplot(mapvald, aes(x = porcentaje_ind, y = avu03))+
+ggplot(mapvald, aes(x = porcentaje_ind, y = avu035))+
          geom_point()+
   geom_smooth(method="lm")+
          theme_classic()
