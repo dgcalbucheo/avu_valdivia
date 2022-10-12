@@ -49,7 +49,7 @@ mapvald$porcentaje_ind <-
   (as.numeric(mapvald$PUEBLOS)/mapvald$TOTAL_P) * 100
 ```
 
-## 2.3. Materialidad viviendas
+## 2.3. Materialidad viviendas - ISMT!
 ```{r}
 #Pendiente
 ```
@@ -59,7 +59,6 @@ mapvald$porcentaje_ind <-
 ```{r}
 mapvald100<-mapvald%>%
   sf::st_buffer(100)
-#st_write(mapvald100, "mapvald100.shp", driver = "ESRI Shapefile")
 ```
 
 
@@ -67,9 +66,6 @@ Plot
 ```{r}
 leafsync::latticeview(mapview::mapview(mapvald),
                       mapview::mapview(mapvald100))
-
-#Se ve bien el buffer
-#Seguimos
 ```
 
 ## 4. Calcular el NDVI
@@ -88,7 +84,6 @@ plot(ndvi,
      main="NDVI Valdivia y Niebla - Septiembre 2020")
 ```
 
-
 Veamos el histograma del NDVI/pixel
 ```{r}
 hist(ndvi,
@@ -98,65 +93,32 @@ hist(ndvi,
 ```
 
 
-Intentaremos clippear el raster con el ndvi en el mapa de valdivia
+## 4.1 Reproyectamos a UTM (18S) el mapa  y el raster (ndvi)
 ```{r}
-r = crop(ndvi, mapvald)
-#they do not overlap, so...
-crs(mapvald100)
-
-```
-
-```{r}
-crs(ndvi)
-```
-
-## 4.1 Reproyectamos a UTM (18S), veamos con este método
-```{r}
-test<- st_transform(mapvald, crs=32718) #32718
-test2<- projectRaster(ndvi, crs=32718)
-
-r = crop(test2,extent(test))
-r2 = mask(r, test)
-plot(r2)
-
-#funcionó!!!
-```
-
-
-Ahora si, corregimos el mapa que tiene el buffer (100m) y el raster (ndvi)
-```{r}
-mapvald100<- st_transform(mapvald100, crs=32718) #32718
+mapvald<- st_transform(mapvald, crs=32718) #32718
 ndvi<- projectRaster(ndvi, crs=32718)
 
 ```
 
 
-
-Método anterior*, no sirve mucho porque corta la imagen al polígono, pero lo dejo igual por si acaso
+Veamos el histograma con el raster clipeado con este método
 ```{r}
-#r = crop(ndvi,extent(mapvald100))
-#r2 = mask(r, mapvald100)
-#plot(r2)
+
+r = crop(ndvi,extent(mapvald))
+r2 = mask(r, mapvald)
+plot(r2)
+```
+
+```{r}
+hist(r2,
+     main = "NDVI: Distribución de los pixeles VALDIVIA/NIEBLA Sept 2020",
+     col = "springgreen",
+     xlab = "valores del NDVI")
+
 ```
 
 
-## 4.2 Extraemos zonal stats del ndvi para clipearlo a mapvald (después hay que revisar cómo clipearlo con un buffer)
-```{r}
-mapvald<-
-  mapvald%>%mutate(
-    ndvimean = extract(ndvi, mapvald, fun = mean, na.rm = TRUE))
-```
-
-## 4.3 Figura exploratoria
-```{r}
-ggplot(mapvald, aes(x = porcentaje_ind, y = ndvimean))+
-         geom_point()+
-  geom_smooth(method="lm")+
-         theme_classic()
-```
-
-
-## 4.4 Ahora calculamos qué superficie es Área Verde Urbana con distintos valores de NDVI
+## 4.2 Ahora calculamos qué superficie es Área Verde Urbana con distintos valores de NDVI
 
 Primero con NDVI >= 0.3
 ```{r}
@@ -174,25 +136,27 @@ plot(avu035,
      main="AVU Valdivia y Niebla - Septiembre 2020 (NDVI >= 0.35)")
 ```
 
-Ahora extraemos los mismos zonal stats que sacamos del NDVI, pero de las AVU (0.3 y 0.35). Aún está pendiente hacerlo al BUFFER
+
+##4.3 Extracción de los zonal stats de las AVU (NDVI > 0.3 y NDVI > 0.35).
+Aplicamos Buffer = 100m
 ```{r}
 mapvald<-
   mapvald%>%mutate(
-    avu03 = extract(avu03, mapvald, fun = mean, na.rm = TRUE))
+    avu03 = extract(avu03, mapvald, fun = mean, buffer=100, na.rm = TRUE))
 
 mapvald<-
   mapvald%>%mutate(
-    avu035 = extract(avu035, mapvald, fun = mean, na.rm = TRUE))
+    avu035 = extract(avu035, mapvald, fun = mean, buffer=100, na.rm = TRUE))
 
 #PENDIENTE, NECESITO EXTRAER EL VALOR SUM/TOTAL DE CADA POLÍGONO
 ```
 
-Veámos qué tal
+
 Figura exploratoria
 ```{r}
 ggplot(mapvald, aes(x = porcentaje_ind, y = avu035))+
          geom_point()+
   geom_smooth(method="lm")+
+  ggtitle("Relación entre el % de personas que se identifican como indígenas y el PROMEDIO de AVU (NDVI > 0.35) a 100m de cada manzana censal")
          theme_classic()
 ```
-
