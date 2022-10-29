@@ -12,7 +12,7 @@ Evaluar la correlación entre índices SEC y el porcentaje de AVU de las manzana
 1) Obtener datos de manzanas censales (Censo 2017) de Valdivia (.shp)
 2) Revisar indicadores SEC de manzanas censales
 3) Definir BUFFER a las manzanas censales
-4) Calcular el NDVI promedio y el % de AVU con "rgee" (Landsat8)
+4) Calcular el NDVI promedio y el % de AVU
 5) Evaluar correlaciones
 
 
@@ -20,12 +20,15 @@ Cargamos los paquetes. "censo2017" se descarga de github/ropensci
 ```{r}
 pkgs = c("ggplot2","sf","dplyr","cartography","leaflet","rgdal","raster","tmap", "tibble", "terra")
 lapply(pkgs, require, character.only = TRUE)
+
 ```
 
 ## 1. Obtener datos de manzanas censales (Censo 2017) de Valdivia
 ```{r}
 setwd("C:\\Users\\dgcal\\Documents\\Github\\avu_valdivia")
 mapvald = st_read("mapvald.shp")
+mapvald <- mapvald[,-56]
+mapvald <- mapvald[,-56]
 ```
 
 
@@ -37,7 +40,7 @@ mapvald<-mapvald%>%
   mutate(PERSONAS_E = na_if(PERSONAS_E, "Indeterminado"))
 
 mapvald$porcentaje_migr <-
-  (as.numeric(mapvald$PERSONAS_E)/mapvald$TOTAL_P) * 100
+  (as.numeric(mapvald$PERSONAS_E)/mapvald$TOTAL_P) * 100 #porcentaje de migrantes por manzana censal
 ```
 
 ## 2.2. Pueblos originarios
@@ -46,10 +49,10 @@ mapvald<-mapvald%>%
   mutate(PUEBLOS = na_if(PUEBLOS, "Indeterminado"))
 
 mapvald$porcentaje_ind <-
-  (as.numeric(mapvald$PUEBLOS)/mapvald$TOTAL_P) * 100
+  (as.numeric(mapvald$PUEBLOS)/mapvald$TOTAL_P) * 100 #porcentaje de indígenas por manzana censal
 ```
 
-## 2.3. Materialidad viviendas - ISMT!
+## 2.3. Materialidad viviendas - REVISAR MÉTODO HOMALS - PCA
 ```{r}
 #Pendiente
 ```
@@ -142,21 +145,72 @@ Aplicamos Buffer = 100m
 ```{r}
 mapvald<-
   mapvald%>%mutate(
-    avu03 = extract(avu03, mapvald, fun = mean, buffer=100, na.rm = TRUE))
+    avu03 = terra::extract(avu03, mapvald, fun = sum, buffer=100, na.rm = TRUE))
 
 mapvald<-
   mapvald%>%mutate(
-    avu035 = extract(avu035, mapvald, fun = mean, buffer=100, na.rm = TRUE))
+    avu035 = terra::extract(avu035, mapvald, fun = sum, buffer=100, na.rm = TRUE))
 
-#PENDIENTE, NECESITO EXTRAER EL VALOR SUM/TOTAL DE CADA POLÍGONO
+```
+
+```{r}
+mapvald100<-
+  mapvald100%>%mutate(
+    avu03=exact_extract(avu03, mapvald100, "sum"))
+
+mapvald100<-
+  mapvald100%>%mutate(
+    avu035=exact_extract(avu035, mapvald100, "sum"))
+
 ```
 
 
 Figura exploratoria
 ```{r}
-ggplot(mapvald, aes(x = porcentaje_ind, y = avu035))+
+ggplot(test, aes(x = porcentaje_migr, y = avu035))+
          geom_point()+
   geom_smooth(method="lm")+
   ggtitle("Relación entre el % de personas que se identifican como indígenas y el PROMEDIO de AVU (NDVI > 0.35) a 100m de cada manzana censal")
          theme_classic()
 ```
+
+
+Figura exploratoria 2
+```{r}
+ggplot(mapvald, aes(x = porcentaje_migr, y = avu03))+
+         geom_point()+
+  geom_smooth(method="lm")+
+  ggtitle("Relación entre el % de personas indígenas y el PROMEDIO de AVU (NDVI > 0.3) a 100m de cada manzana censal")
+         theme_classic()
+```
+
+## 5. Procesamiento datos SQL - Censo 2017 (para ISMT) para VALDIVIA
+```{r}
+df<-DBI::dbGetQuery(
+  censo_conectar(),
+  'SELECT DISTINCT
+    z.geocodigo,
+    v.vivienda_ref_id,
+    v.ind_hacin_rec,
+    v.ind_material,
+    h.hogar_ref_id,
+    p.personan,
+    p.escolaridad
+   FROM
+    zonas AS z,
+    viviendas AS v,
+    hogares AS h,
+    personas AS p
+       WHERE
+    z.geocodigo LIKE \'141011%\'
+  AND
+    z.zonaloc_ref_id = v.zonaloc_ref_id
+  AND
+    v.vivienda_ref_id = h.vivienda_ref_id
+  AND
+    h.hogar_ref_id = p.hogar_ref_id
+  AND 
+    p.personan = 1')
+
+```
+
